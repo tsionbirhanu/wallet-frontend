@@ -12,6 +12,7 @@ import {
   listCustomerTransactions,
   requestWithdrawalOtp,
   setCustomerPin,
+  updateCustomerStatus,
 } from "@/lib/api";
 import { formatDateTime, formatMoney, initialsOf } from "@/lib/format";
 import type { Customer, Transaction } from "@/lib/types";
@@ -38,6 +39,8 @@ import { StatusBadge } from "@/components/status-badge";
 import { EmptyState, Panel } from "@/components/ui";
 
 type Tab = "overview" | "transactions";
+type MoneyDialog = "deposit" | "withdraw" | "reset-pin";
+type StatusDialogMode = "block" | "activate";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "overview", label: "Overview" },
@@ -573,13 +576,99 @@ function ResetPinDialog({
   );
 }
 
+function StatusDialog({
+  customer,
+  mode,
+  onClose,
+  onSuccess,
+}: {
+  customer: Customer;
+  mode: StatusDialogMode;
+  onClose: () => void;
+  onSuccess: (customer: Customer) => void;
+}) {
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const nextStatus = mode === "block" ? "blocked" : "active";
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submitting) return;
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result = await updateCustomerStatus(customer.id, {
+        status: nextStatus,
+        reason: reason.trim() || undefined,
+      });
+      onSuccess(result.customer);
+    } catch (err) {
+      setError(friendlyMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={mode === "block" ? "Block customer" : "Activate customer"}
+      description={
+        mode === "block"
+          ? "Blocked customers cannot receive deposits or complete withdrawals."
+          : "Restore this customer so wallet operations can continue."
+      }
+      dismissible={!submitting}
+      footer={
+        <>
+          <button type="button" className="btn-secondary" onClick={onClose} disabled={submitting}>
+            Cancel
+          </button>
+          <button type="submit" form="status-form" className="btn-primary" disabled={submitting}>
+            {submitting && <SpinnerIcon className="h-4 w-4" />}
+            {mode === "block" ? "Block customer" : "Activate customer"}
+          </button>
+        </>
+      }
+    >
+      <form id="status-form" onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="status-reason" className="field-label">
+            Reason
+          </label>
+          <textarea
+            id="status-reason"
+            data-autofocus
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            disabled={submitting}
+            rows={3}
+            placeholder="Optional"
+            className="field-input min-h-24 resize-y"
+          />
+        </div>
+        {error && (
+          <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[13px] text-rose-800">
+            {error}
+          </p>
+        )}
+      </form>
+    </Modal>
+  );
+}
+
 export function CustomerDetailView() {
   const params = useParams<{ id: string }>();
   const customerId = params?.id ?? "";
 
   const [tab, setTab] = useState<Tab>("overview");
   const [verifying, setVerifying] = useState(false);
-  const [moneyDialog, setMoneyDialog] = useState<"deposit" | "withdraw" | "reset-pin" | null>(null);
+  const [moneyDialog, setMoneyDialog] = useState<MoneyDialog | null>(null);
+  const [statusDialog, setStatusDialog] = useState<StatusDialogMode | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [transactionPage, setTransactionPage] = useState(1);
 
@@ -636,6 +725,12 @@ export function CustomerDetailView() {
   function handlePinReset() {
     setMoneyDialog(null);
     setBanner("Customer PIN has been reset. Share it with the customer securely.");
+  }
+
+  function handleStatusSuccess(updated: Customer) {
+    setStatusDialog(null);
+    reload();
+    setBanner(`${updated.full_name} is now ${updated.status}.`);
   }
 
   if (error) {
@@ -758,6 +853,24 @@ export function CustomerDetailView() {
                 onClick={() => setMoneyDialog("reset-pin")}
               >
                 Reset PIN
+              </button>
+            )}
+            {customer.status === "active" && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setStatusDialog("block")}
+              >
+                Block
+              </button>
+            )}
+            {customer.status === "blocked" && (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setStatusDialog("activate")}
+              >
+                Activate
               </button>
             )}
             <button
@@ -967,6 +1080,15 @@ export function CustomerDetailView() {
           customerId={customer.id}
           onClose={() => setMoneyDialog(null)}
           onSuccess={handlePinReset}
+        />
+      )}
+
+      {statusDialog && (
+        <StatusDialog
+          customer={customer}
+          mode={statusDialog}
+          onClose={() => setStatusDialog(null)}
+          onSuccess={handleStatusSuccess}
         />
       )}
     </>

@@ -2,12 +2,12 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { adminLogin, apiHostLabel, fieldErrors as apiFieldErrors, friendlyMessage } from "@/lib/api";
+import { adminLogin, fieldErrors as apiFieldErrors, friendlyMessage } from "@/lib/api";
 import { setSession } from "@/lib/auth";
 import { useSessionToken } from "@/lib/use-session";
 import { AlertIcon, EyeIcon, EyeOffIcon, SpinnerIcon } from "@/components/icons";
 
-type FieldErrors = Partial<Record<"email" | "password", string>>;
+type FieldErrors = Partial<Record<"phone_number" | "password", string>>;
 
 /** Only allow same-origin absolute paths from ?next=, never an external URL. */
 function safeRedirect(target: string | null): string {
@@ -23,7 +23,7 @@ export default function LoginPage() {
   // who already has a token never sees the form — they go straight through.
   const token = useSessionToken();
   const signedIn = token !== null;
-  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -39,12 +39,9 @@ export default function LoginPage() {
     event.preventDefault();
     if (submitting) return;
 
-    const trimmedEmail = email.trim();
+    const trimmedPhoneNumber = phoneNumber.trim();
     const errors: FieldErrors = {};
-    if (!trimmedEmail) errors.email = "Enter your admin email.";
-    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      errors.email = "Enter a valid email address.";
-    }
+    if (!trimmedPhoneNumber) errors.phone_number = "Enter your admin phone number.";
     if (!password) errors.password = "Enter your password.";
 
     setFieldErrors(errors);
@@ -54,7 +51,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const result = await adminLogin({
-        email: trimmedEmail,
+        phone_number: trimmedPhoneNumber,
         password,
       });
       setPassword("");
@@ -64,7 +61,7 @@ export default function LoginPage() {
       setFormError(friendlyMessage(err));
       const fields = apiFieldErrors(err);
       setFieldErrors({
-        email: fields.email,
+        phone_number: fields.phone_number,
         password: fields.password,
       });
       setSubmitting(false);
@@ -102,29 +99,29 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit} noValidate className="mt-7 space-y-5">
         <div>
-          <label htmlFor="email" className="field-label">
-            Email
+          <label htmlFor="phone_number" className="field-label">
+            Phone number
           </label>
           <input
             autoFocus
-            id="email"
-            name="email"
-            type="email"
-            inputMode="email"
+            id="phone_number"
+            name="phone_number"
+            type="tel"
+            inputMode="tel"
             autoComplete="username"
-            placeholder="admin@test.com"
+            placeholder="+251 911 000 000"
             className={`field-input ${
-              fieldErrors.email ? "border-rose-300 focus:border-rose-400 focus:ring-rose-500/12" : ""
+              fieldErrors.phone_number ? "border-rose-300 focus:border-rose-400 focus:ring-rose-500/12" : ""
             }`}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
             disabled={submitting}
-            aria-invalid={Boolean(fieldErrors.email)}
-            aria-describedby={fieldErrors.email ? "email-error" : undefined}
+            aria-invalid={Boolean(fieldErrors.phone_number)}
+            aria-describedby={fieldErrors.phone_number ? "phone-number-error" : undefined}
           />
-          {fieldErrors.email && (
-            <p id="email-error" className="mt-1.5 text-xs text-rose-600">
-              {fieldErrors.email}
+          {fieldErrors.phone_number && (
+            <p id="phone-number-error" className="mt-1.5 text-xs text-rose-600">
+              {fieldErrors.phone_number}
             </p>
           )}
         </div>
@@ -184,11 +181,6 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <p className="mt-7 border-t border-line pt-5 text-xs leading-relaxed text-slate-400">
-        Connected to{" "}
-        <span className="font-mono text-slate-500">{apiHostLabel()}</span>. Access
-        is limited to administrator accounts; sessions end when you sign out.
-      </p>
     </div>
   );
 }

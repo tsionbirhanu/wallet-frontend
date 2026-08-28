@@ -8,9 +8,11 @@ import type { CustomerWithWallet, Transaction } from "@/lib/types";
 import { useApiResource } from "@/lib/use-api";
 import {
   AlertIcon,
+  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   RefreshIcon,
+  SearchIcon,
   TransactionsIcon,
 } from "@/components/icons";
 import { EmptyState, PageHeader, Panel } from "@/components/ui";
@@ -19,10 +21,26 @@ const CUSTOMER_PAGE_SIZE = 100;
 const TRANSACTION_FETCH_SIZE = 100;
 const TABLE_PAGE_SIZE = 20;
 
+const TYPE_OPTIONS = [
+  { value: "", label: "All types" },
+  { value: "DEPOSIT", label: "Deposits" },
+  { value: "WITHDRAWAL", label: "Withdrawals" },
+] as const;
+
+const STATUS_OPTIONS = [
+  { value: "", label: "All statuses" },
+  { value: "pending", label: "Pending" },
+  { value: "success", label: "Completed" },
+  { value: "failed", label: "Failed" },
+] as const;
+
 type LedgerRow = Transaction & {
   customer_name: string;
   customer_phone: string;
 };
+
+type TypeFilter = (typeof TYPE_OPTIONS)[number]["value"];
+type StatusFilter = (typeof STATUS_OPTIONS)[number]["value"];
 
 const EMPTY_LEDGER_ROWS: LedgerRow[] = [];
 
@@ -218,18 +236,51 @@ function TransactionsTable({
 
 export function TransactionsView() {
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
   const source = useCallback((signal: AbortSignal) => loadAllTransactions(signal), []);
   const { data, error, loading, reload } = useApiResource(source);
 
   const rows = data ?? EMPTY_LEDGER_ROWS;
-  const totalPages = Math.max(1, Math.ceil(rows.length / TABLE_PAGE_SIZE));
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (typeFilter && row.type !== typeFilter) return false;
+      if (statusFilter && row.status !== statusFilter) return false;
+      if (!query) return true;
+
+      return [
+        row.customer_name,
+        row.customer_phone,
+        row.customer_id,
+        row.transaction_ref,
+        row.amount,
+        row.new_balance,
+        row.status,
+        row.type,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  }, [rows, search, statusFilter, typeFilter]);
+  const filtered = Boolean(search.trim() || typeFilter || statusFilter);
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / TABLE_PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pagedRows = useMemo(
-    () => rows.slice((currentPage - 1) * TABLE_PAGE_SIZE, currentPage * TABLE_PAGE_SIZE),
-    [currentPage, rows],
+    () => filteredRows.slice((currentPage - 1) * TABLE_PAGE_SIZE, currentPage * TABLE_PAGE_SIZE),
+    [currentPage, filteredRows],
   );
-  const rangeStart = rows.length === 0 ? 0 : (currentPage - 1) * TABLE_PAGE_SIZE + 1;
-  const rangeEnd = Math.min(currentPage * TABLE_PAGE_SIZE, rows.length);
+  const rangeStart = filteredRows.length === 0 ? 0 : (currentPage - 1) * TABLE_PAGE_SIZE + 1;
+  const rangeEnd = Math.min(currentPage * TABLE_PAGE_SIZE, filteredRows.length);
+
+  function resetFilters() {
+    setSearch("");
+    setTypeFilter("");
+    setStatusFilter("");
+    setPage(1);
+  }
 
   return (
     <>
@@ -245,6 +296,63 @@ export function TransactionsView() {
       />
 
       <Panel title="All Transactions" description="Built from each customer's transaction statement.">
+        <div className="flex flex-col gap-3 border-b border-line p-4 lg:flex-row lg:items-center">
+          <div className="relative flex-1">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Search customer, phone or reference"
+              aria-label="Search transactions"
+              className="field-input pl-9"
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:w-[26rem]">
+            <div className="relative">
+              <select
+                value={typeFilter}
+                onChange={(event) => {
+                  setTypeFilter(event.target.value as TypeFilter);
+                  setPage(1);
+                }}
+                aria-label="Filter by transaction type"
+                className="field-select"
+              >
+                {TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            </div>
+
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value as StatusFilter);
+                  setPage(1);
+                }}
+                aria-label="Filter by status"
+                className="field-select"
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            </div>
+          </div>
+        </div>
+
         {error ? (
           <div className="flex flex-col items-center px-6 py-14 text-center">
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-50 text-rose-500">
@@ -267,16 +375,37 @@ export function TransactionsView() {
               body="Once a customer receives a deposit or completes a withdrawal, it will appear here."
             />
           </div>
+        ) : filteredRows.length === 0 && !loading ? (
+          <div className="flex flex-col items-center px-6 py-14 text-center">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+              <TransactionsIcon className="h-5 w-5" />
+            </span>
+            <p className="mt-4 text-sm font-medium text-slate-700">No transactions match those filters</p>
+            <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-slate-500">
+              Try a different search term, type, or status.
+            </p>
+            {filtered && (
+              <button type="button" className="btn-secondary mt-5" onClick={resetFilters}>
+                Clear filters
+              </button>
+            )}
+          </div>
         ) : (
           <>
             <TransactionsTable rows={pagedRows} loading={loading} />
-            {rows.length > 0 && (
+            {filteredRows.length > 0 && (
               <div className="flex flex-col items-center gap-3 border-t border-line px-5 py-3.5 sm:flex-row sm:justify-between">
                 <p className="text-[13px] text-slate-500">
                   Showing <span className="font-medium text-slate-700">{rangeStart}</span>
                   {"-"}
                   <span className="font-medium text-slate-700">{rangeEnd}</span> of{" "}
-                  <span className="font-medium text-slate-700">{rows.length}</span>
+                  <span className="font-medium text-slate-700">{filteredRows.length}</span>
+                  {filtered && (
+                    <>
+                      {" "}
+                      filtered from <span className="font-medium text-slate-700">{rows.length}</span>
+                    </>
+                  )}
                 </p>
                 <div className="flex items-center gap-2">
                   <button

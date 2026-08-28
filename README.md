@@ -42,10 +42,10 @@ The Admin Web dev server runs at `http://localhost:3000` and redirects to `/logi
 
 ### Login
 
-`POST /admin/login` authenticates the seeded admin with email and password. Local demo credentials from the backend seed are:
+`POST /admin/login` authenticates the seeded admin with phone number and password. Local demo credentials from the backend seed are:
 
 ```text
-email: admin@test.com
+phone_number: +251 911 000 000
 password: Admin123!
 ```
 
@@ -79,6 +79,9 @@ Active customers have actions for:
 - Deposit: `POST /customers/:id/deposit`
 - Withdraw: `POST /customers/:id/withdraw/request-otp`, then `POST /customers/:id/withdraw/confirm`
 - Reset PIN: `POST /customers/:id/set-pin`
+- Block account: `PATCH /customers/:id/status`
+
+Blocked customers can be activated again from the customer detail page with `PATCH /customers/:id/status`.
 
 Money values render as `X,XXX.XX ETB`.
 
@@ -88,7 +91,7 @@ Money values render as `X,XXX.XX ETB`.
 
 ### Transactions
 
-The current backend contract exposes customer transaction statements and dashboard recent activity, not a global ledger endpoint. The `/transactions` page points admins to the live customer-statement flow.
+The current backend contract exposes customer transaction statements and dashboard recent activity, not a global ledger endpoint. The `/transactions` page merges customer statements in the frontend and supports customer/reference search plus type and status filters.
 
 ## Deployment
 
@@ -114,6 +117,3 @@ To verify build-time API URL wiring locally:
 $env:NEXT_PUBLIC_API_URL="https://your-backend-demo-url.example.com"
 npm run build
 ```
-
-The top bar displays the configured API host for a quick demo sanity check.
-

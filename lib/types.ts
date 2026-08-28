@@ -75,9 +75,9 @@ export interface Pagination {
   total_pages: number;
 }
 
-/** POST /admin/login — note the contract keys on phone_number, not email. */
+/** POST /admin/login */
 export interface AdminLoginRequest {
-  email: string;
+  phone_number: string;
   password: string;
 }
 

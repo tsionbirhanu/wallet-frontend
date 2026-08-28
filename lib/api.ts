@@ -105,7 +105,7 @@ export function friendlyMessage(err: unknown): string {
     case "TIMEOUT":
       return "The server took too long to respond. Please try again.";
     case "INVALID_CREDENTIALS":
-      return "Incorrect email or password.";
+      return "Incorrect phone number or password.";
     case "ADMIN_BLOCKED":
       return "This admin account has been blocked. Contact a system administrator.";
     case "UNAUTHENTICATED":
