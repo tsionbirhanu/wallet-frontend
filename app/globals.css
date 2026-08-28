@@ -1,0 +1,163 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+
+  /* Chrome: deep navy — sidebar, headings, dark surfaces */
+  --color-navy-950: #061320;
+  --color-navy-900: #0a1d2e;
+  --color-navy-850: #0e2537;
+  --color-navy-800: #133046;
+  --color-navy-700: #1b4260;
+  --color-navy-600: #27577c;
+
+  /* Primary: deep teal — actions, active states, links */
+  --color-brand-50: #eff7f8;
+  --color-brand-100: #d5ecef;
+  --color-brand-200: #a9d9df;
+  --color-brand-300: #6fbcc6;
+  --color-brand-400: #349aa6;
+  --color-brand-500: #178089;
+  --color-brand-600: #0f6f78;
+  --color-brand-700: #0c5a62;
+  --color-brand-800: #0a464d;
+
+  /* Accent: restrained gold — highlights only, never body chrome */
+  --color-gold-300: #f6cd63;
+  --color-gold-400: #eeb32a;
+  --color-gold-500: #d1930d;
+  --color-gold-600: #8a6208;
+
+  /* Surfaces */
+  --color-canvas: #f4f6f9;
+  --color-surface: #ffffff;
+  --color-line: #e3e8ef;
+  --color-line-strong: #cfd7e3;
+
+  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
+  --shadow-lift: 0 4px 6px -2px rgb(15 23 42 / 0.05), 0 12px 24px -6px rgb(15 23 42 / 0.10);
+  --shadow-panel: 0 24px 48px -12px rgb(6 19 32 / 0.18);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-slate-900 antialiased;
+  }
+
+  /* Kill default form chrome — every control is styled explicitly. */
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--color-slate-900);
+    -webkit-box-shadow: 0 0 0 1000px #fff inset;
+    caret-color: var(--color-slate-900);
+  }
+
+  ::selection {
+    background: var(--color-brand-200);
+    color: var(--color-navy-900);
+  }
+}
+
+@layer components {
+  .field-input {
+    @apply block w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm text-slate-900
+           shadow-xs outline-none transition
+           placeholder:text-slate-400
+           hover:border-line-strong
+           focus:border-brand-500 focus:ring-4 focus:ring-brand-500/12
+           disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-[13px] font-medium text-slate-700;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5
+           text-sm font-semibold text-white shadow-xs transition
+           hover:bg-brand-700
+           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600
+           active:bg-brand-800
+           disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-brand-600;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 py-2.5
+           text-sm font-semibold text-slate-700 shadow-xs transition
+           hover:border-line-strong hover:bg-slate-50
+           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600
+           disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2
+           text-sm font-medium text-slate-600 transition
+           hover:bg-slate-100 hover:text-slate-900
+           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600
+           disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent;
+  }
+
+  /* Native select with the browser arrow replaced by our own chevron. */
+  .field-select {
+    @apply block w-full appearance-none rounded-lg border border-line bg-white py-2.5 pl-3.5 pr-9
+           text-sm text-slate-900 shadow-xs outline-none transition
+           hover:border-line-strong
+           focus:border-brand-500 focus:ring-4 focus:ring-brand-500/12
+           disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400;
+  }
+
+  .card {
+    @apply rounded-xl border border-line bg-surface shadow-card;
+  }
+}
+
+@layer utilities {
+  @keyframes overlay-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .animate-overlay {
+    animation: overlay-in 0.15s ease-out;
+  }
+
+  .animate-panel {
+    animation: panel-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-overlay,
+    .animate-panel {
+      animation: none;
+    }
+  }
+}
